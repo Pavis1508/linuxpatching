@@ -10,3 +10,14 @@
         name: '*'
         state: latest
       when: ansible_facts['os_family'] == "RedHat"
+      
+    - name: Update apt cache (for Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Update cache if older than 1 hour
+      when: ansible_os_family == "Ubuntu"
+ 
+    - name: Perform full system upgrade (for Ubuntu)
+      ansible.builtin.apt:
+        upgrade: dist
+      when: ansible_os_family == "Ubuntu"
