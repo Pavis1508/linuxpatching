@@ -1,23 +1,90 @@
----
 - name: Linux OS Patching
-  hosts: all
+  hosts: ubuntu_server
   become: true
-  gather_facts: yes
-  tasks:
+  gather_facts: no
+- name: Gather facts
+  ansible.builtin.setup:
+    gather_subset: '!all'
+- name: Create backup directory on target servers
+  ansbile.builtin.file:
+    path: /var/tmp/bakcups
+    state: directory
     - name: Update yum/dnf cache and OS patching (RedHat)
       ansible.builtin.yum:
         update_cache: yes
         name: '*'
         state: latest
       when: ansible_facts['os_family'] == "RedHat"
-      
-    - name: Update apt cache (for Ubuntu)
-      ansible.builtin.apt:
-        update_cache: yes
-        cache_valid_time: 3600 # Update cache if older than 1 hour
-      when: ansible_os_family == "Ubuntu"
- 
-    - name: Perform full system upgrade (for Ubuntu)
-      ansible.builtin.apt:
-        upgrade: dist
-      when: ansible_os_family == "Ubuntu"
+- name: Copy backup script to target servers
+ansible.builtin.yum:
+src: backupp_script.sh
+dest: /usr/local.bin/backup_script.sh
+mode: '0755'
+- name: Execute backup script on target servers asynchronously
+ansible.builtin.shell: /usr/local/bin/backup_script.sh
+args:
+  chdir: /var/tmp
+environment:
+  CONTROL_SERVER_IP: "192.168.137.3"
+async: 180
+poll: 0
+register: backup_job_id
+- name: Wait for backup script to complete
+ansible.builtin.async_status:
+  jid: "{{ backup_job_id.ansible_job_id }}"
+register: backup_result
+until: backup_result.finished
+retries: 10
+delay: 20
+- name: Create backup directory on control server
+delegate_to: 192.168.137.3
+ansible.builtin.file:
+  path: "/var/tmp/backups/ {{inventory_hostname}}"
+  state: directory
+- name: Pull backups from target servers to control server
+ansible.builtin.synchronize:
+  scr: /var/tmp/backups/
+  dest: "/var/tmp/backups/{{inventory_hostname}}"
+  mode: pull
+  rsync_opts: "--compress"
+delegate_to: 192.168.137.3
+- name: Check file system utilization
+ansible.built.command: df -h /
+register: disk_space
+- name: Fail if disk space utilization is over 85%
+ansible.builtin.fail:
+  msg: "Disk space utilization is over 85%. Aborting upgrade.:
+    when: "{disk space.stdout  regex_search{'([0-9+)% /')  int) > 85"
+- name: Check UFW status
+    ansible.builtin.command: ufw status
+    register: ufw_status
+- name: Stop UF if it is active
+    ansible.builtin.command: ufw disable
+    when: "'Status: active' in ufw_status.stdout"
+- name: Get current OS version before upgrade
+ansible.builtin.command: lsb_release -r
+register: os_version_before
+- name: Update all packages to the latest version
+ansible.builtin.apt:
+  update_cache: yes
+  upgrade: dist
+- name: Install the update-manager-core package
+ansible.builtin.apt:
+  name: update-manager-core
+  state: present
+- name: Upgrade the distribution to Ubuntu
+  ansible.builtin.command: do-release-upgrade -f DistUpgradeViewNonIntegrative
+- name: Reboot the server after distribution upgrade
+ansible.builtin.reboot:
+  msg: "Reboot initiated by Ansible for OS upgrade"
+- name: Get OS version after upgrade
+  ansible.builtin.command: lsb_release -r
+  register: os_version_after
+- name: Fail if OS version has not changed
+ansible.builtin.fail:
+  msg: "Upgrade failed. The OS version remains the same."
+  when: os_version_before.stdout == os_version_after.stdout
+- name: Inform if OS version has changed indicating a successful upgrade
+  ansbible.builtin.debug:
+    msg: "Upgrade successful. OS version changed from {{ os_version_before.stdout }} to {{ os_version_after.stdout }}}."
+    when: os_version_before.stdout != os_version_after.stdout
