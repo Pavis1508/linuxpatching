@@ -1,7 +1,7 @@
 - name: Linux OS Patching
   hosts: ubuntu_server
   become: true
-  gather_facts: no
+  gather_facts: yes
 - name: Gather facts
   ansible.builtin.setup:
     gather_subset: '!all'
@@ -54,7 +54,7 @@ register: disk_space
 - name: Fail if disk space utilization is over 85%
 ansible.builtin.fail:
   msg: "Disk space utilization is over 85%. Aborting upgrade.:
-    when: "{disk space.stdout  regex_search{'([0-9+)% /')  int) > 85"
+    when: "{disk space.stdout  regex_search{'([0-9+)% /')  int) > 85 }}"
 - name: Check UFW status
     ansible.builtin.command: ufw status
     register: ufw_status
