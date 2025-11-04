@@ -9,17 +9,17 @@
   ansbile.builtin.file:
     path: /var/tmp/bakcups
     state: directory
-    - name: Update yum/dnf cache and OS patching (RedHat)
-      ansible.builtin.yum:
-        update_cache: yes
-        name: '*'
-        state: latest
-      when: ansible_facts['os_family'] == "RedHat"
 - name: Copy backup script to target servers
 ansible.builtin.yum:
 src: backupp_script.sh
 dest: /usr/local.bin/backup_script.sh
 mode: '0755'
+- name: Update yum/dnf cache and OS patching (RedHat)
+      ansible.builtin.yum:
+        update_cache: yes
+        name: '*'
+        state: latest
+      when: ansible_facts['os_family'] == "RedHat"
 - name: Execute backup script on target servers asynchronously
 ansible.builtin.shell: /usr/local/bin/backup_script.sh
 args:
@@ -53,8 +53,8 @@ ansible.built.command: df -h /
 register: disk_space
 - name: Fail if disk space utilization is over 85%
 ansible.builtin.fail:
-  msg: "Disk space utilization is over 85%. Aborting upgrade.:
-    when: "{disk space.stdout  regex_search{'([0-9+)% /')  int) > 85 }}"
+  msg: "Disk space utilization is over 85%. Aborting upgrade."
+    when: "(disk space.stdout  regex_search('([0-9+)% /')  int) > 85 "
 - name: Check UFW status
     ansible.builtin.command: ufw status
     register: ufw_status
