@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+ 
+    environment {
+        TARGET_SERVER = "192.168.137.3"        // your Linux server IP
+        SSH_USER = "ubuntu-server"                  // user Jenkins uses to SSH
+        PATCH_LOG = "/tmp/patch_log.txt"
+        ROLLBACK_SCRIPT = "scripts/rollback.sh"
+        SLACK_CHANNEL = "#server-patching"
+    }
+ 
+    stages {
+ 
+        stage('Checkout Code') {
+            steps {
+                echo "Cloning repository from GitHub..."
+                git branch: 'main', url: 'https://https://github.com/Pavis1508/linuxpatching.git'
+            }
+        }
+ 
+        stage('Pre-Check') {
+            steps {
+                echo "Running pre-checks on target server..."
+                sh "ssh ${SSH_USER}@${TARGET_SERVER} 'bash -s' < scripts/precheck.sh"
+            }
+        }
+ 
+        stage('Apply Patches') {
+            steps {
+                echo "Applying patches..."
+                sh "ssh ${SSH_USER}@${TARGET_SERVER} 'bash -s' < scripts/patching.sh > ${PATCH_LOG} 2>&1"
+            }
+        }
+ 
+        stage('Verify Patching') {
+            steps {
+                echo "Verifying patch status..."
+                script {
+                    def result = sh(script: "ssh ${SSH_USER}@${TARGET_SERVER} 'bash -s' < scripts/verify.sh", returnStatus: true)
+                    if (result != 0) {
+                        error("Verification failed. Triggering rollback...")
+                    }
+                }
+            }
+        }
+ 
+        stage('Rollback (if failed)') {
+            when {
+                expression { currentBuild.result == 'FAILURE' }
+            }
+            steps {
+                echo "Rolling back patches..."
+                sh "ssh ${SSH_USER}@${TARGET_SERVER} 'bash -s' < ${ROLLBACK_SCRIPT}"
+            }
+        }
+    }
+ 
+    post {
+        success {
+            emailext (
+                to: "admin@example.com",
+                subject: "Linux Patching SUCCESS - ${TARGET_SERVER}",
+                body: "Patching completed successfully on ${TARGET_SERVER}"
+            )
+            slackSend(channel: "${SLACK_CHANNEL}", message: "✅ Linux patching successful on ${TARGET_SERVER}")
+        }
+ 
+        failure {
+            emailext (
+                to: "admin@example.com",
+                subject: "Linux Patching FAILED - ${TARGET_SERVER}",
+                body: "Patching failed on ${TARGET_SERVER}. Rollback triggered."
+            )
+            slackSend(channel: "${SLACK_CHANNEL}", message: "❌ Linux patching failed on ${TARGET_SERVER}. Rollback initiated.")
+        }
+    }
+}
