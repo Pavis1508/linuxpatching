@@ -1,5 +1,5 @@
 - name: Linux OS Patching
-  hosts: ubuntu_server
+  hosts: ubuntuserver
   become: true
   gather_facts: yes
   tasks:
