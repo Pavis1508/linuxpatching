@@ -10,7 +10,8 @@ pipeline {
             steps {
                 ansiblePlaybook(
                     installation: 'ansible',
-                    playbook: 'upgrade.yml'
+                    playbook: 'upgrade.yml',
+                    inventory: '/etc/ansible/hosts'
                 )
             }
         }
