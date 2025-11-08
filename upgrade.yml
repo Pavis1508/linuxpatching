@@ -2,16 +2,19 @@
   hosts: ubuntuserver
   become: true
   gather_facts: yes
+
   tasks:
 
     - name: Gather minimal facts
       ansible.builtin.setup:
-        gather_subset: '!all'
+        gather_subset:
+          - '!all'
 
     - name: Create backup directory on target servers
       ansible.builtin.file:
         path: /var/tmp/backups
         state: directory
+        mode: '0755'
 
     - name: Copy backup script to target servers
       ansible.builtin.copy:
@@ -41,7 +44,8 @@
       ansible.builtin.file:
         path: "/var/tmp/backups/{{ inventory_hostname }}"
         state: directory
-      delegate_to: 192.168.137.3
+        mode: '0755'
+      delegate_to: localhost
 
     - name: Pull backups from target servers to control server
       ansible.builtin.synchronize:
@@ -50,7 +54,7 @@
         mode: pull
         rsync_opts:
           - "--compress"
-      delegate_to: 192.168.137.3
+      delegate_to: localhost
 
     - name: Check file system utilization
       ansible.builtin.command: df -h /
@@ -86,10 +90,13 @@
 
     - name: Upgrade the distribution to Ubuntu
       ansible.builtin.command: do-release-upgrade -f DistUpgradeViewNonInteractive
+      register: upgrade_output
+      ignore_errors: true
 
     - name: Reboot the server after distribution upgrade
       ansible.builtin.reboot:
         msg: "Reboot initiated by Ansible for OS upgrade"
+      when: upgrade_output is not failed
 
     - name: Get OS version after upgrade
       ansible.builtin.command: lsb_release -r
