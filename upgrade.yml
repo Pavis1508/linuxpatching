@@ -1,6 +1,7 @@
 - name: Linux OS Patching
   hosts: ubuntuserver
   become: true
+  remote_user: root
   gather_facts: yes
 
   tasks:
