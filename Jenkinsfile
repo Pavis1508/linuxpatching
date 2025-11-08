@@ -1,15 +1,10 @@
 pipeline {
     agent any
 
-    environment {
-        // Optional: if you want to use a specific private key file
-        ANSIBLE_PRIVATE_KEY = '/var/lib/jenkins/.ssh/id_rsa'
-    }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/Pavis1508/linuxpatching.git'
+                git branch: 'main', url: 'https://github.com/Pavis1508/linuxpatching.git' // Changed master to main as per git output
             }
         }
 
@@ -19,9 +14,18 @@ pipeline {
                     installation: 'ansible',
                     playbook: 'upgrade.yml',
                     inventory: '/etc/ansible/hosts',
-                    credentialsId: 'ansible-ssh-root-key',
-                    extras: '--user=root --private-key=${ANSIBLE_PRIVATE_KEY}'
+                    credentialsId: 'ansible-ssh-root-key', // This uses the private key from Jenkins credentials
+                    // extras: '--user=root' // --user=root is redundant if username is 'root' in credentialsId
+                                           // --private-key=${ANSIBLE_PRIVATE_KEY} is NOT needed because credentialsId handles it
+                                           // Best practice is to let credentialsId manage the key.
+                                           // If you REALLY need to specify --user, it's better placed here.
+                    // For clarity, let's keep it simple:
+                    // If your credentialsId specifies 'root', then --user=root is redundant.
+                    // The 'credentialsId' already provides the private key.
                 )
+                // If you *must* specify the user via extras (e.g., if credentialsId only stores the key without a user binding)
+                // then: extras: '--user=root'
+                // But generally, credentialsId handles both username and key.
             }
         }
     }
