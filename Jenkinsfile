@@ -18,7 +18,6 @@ pipeline {
                     installation: 'ansible',  // must match Jenkins Ansible plugin name
                     playbook: 'upgrade.yml',
                     inventory: '/etc/ansible/hosts',
-                    credentialsId: 'ansible-ssh-root-key',
                     extras: "--user=root --private-key=${ANSIBLE_PRIVATE_KEY}"
                 )
             }
