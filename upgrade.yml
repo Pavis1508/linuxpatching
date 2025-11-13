@@ -25,7 +25,7 @@
         chdir: /var/tmp
       environment:
         CONTROL_SERVER_IP: "192.168.137.3"
-      async: 180
+      async: 600  # Increased timeout
       poll: 0
       register: backup_job_id
 
@@ -34,14 +34,14 @@
         jid: "{{ backup_job_id.ansible_job_id }}"
       register: backup_result
       until: backup_result.finished
-      retries: 10
+      retries: 30  # Increased retries
       delay: 20
 
     - name: Create backup directory on control server
       ansible.builtin.file:
         path: "/var/tmp/backups/{{ inventory_hostname }}"
         state: directory
-      delegate_to: 192.168.137.3
+      delegate_to: "{{ groups['controlserver'][0] }}"
 
     - name: Pull backups from target servers to control server
       ansible.builtin.synchronize:
@@ -50,7 +50,7 @@
         mode: pull
         rsync_opts:
           - "--compress"
-      delegate_to: 192.168.137.3
+      delegate_to: "{{ groups['controlserver'][0] }}"
 
     - name: Check file system utilization
       ansible.builtin.command: df -h /
