@@ -3,14 +3,6 @@
   become: true
   gather_facts: yes
 
- vars:
-    control_server_ip: "192.168.137.3"
-    backup_script_path: /usr/local/bin/backup_script.sh
-    backup_dir: /var/tmp/backups
-    async_timeout: 300
-    async_retries: 25
-    async_delay: 30
-
   tasks:
     - name: Gather minimal facts
       ansible.builtin.setup:
@@ -45,21 +37,19 @@
       retries: 25
       delay: 30
 
-    - name: Create backup directory on control server
-      ansible.builtin.file:
-        path: "/var/tmp/backups/{{ ansible_hostname }}"
-        state: directory
-      delegate_to: 192.168.137.3
+   - name: Create backup directory on control server
+  ansible.builtin.file:
+    path: "/var/tmp/backups/{{ ansible_hostname }}"
+    state: directory
+  delegate_to: 192.168.137.3
 
-    - name: Pull backups from target servers to control server
-      ansible.builtin.synchronize:
-        src: "/var/tmp/backups/{{ ansible_hostname }}"
-        dest: "/var/tmp/backups/{{ ansible_hostname }}"
-        mode: pull
-        rsync_opts:
-          - "--compress"
-      delegate_to: 192.168.137.3
-
+- name: Pull backups from target servers to control server
+  ansible.builtin.synchronize:
+    src: "/var/tmp/backups/{{ ansible_hostname }}"
+    dest: "/var/tmp/backups/{{ ansible_hostname }}"
+    mode: pull
+    rsync_opts:
+      - "--compress"
     - name: Check file system utilization
       ansible.builtin.command: df -h /
       register: disk_space
