@@ -25,7 +25,7 @@
         chdir: /var/tmp
       environment:
         CONTROL_SERVER_IP: "192.168.137.3"
-      async: 300
+      async: 3600
       poll: 0
       register: backup_job_id
 
@@ -42,7 +42,8 @@
       ansible.builtin.file:
         path: "/var/tmp/backups/{{ ansible_hostname }}"
         state: directory
-      delegate_to: 192.168.137.3
+      delegate_to: localhost
+      run_once: true
 
     # FIX: This task is now correctly indented
     - name: Pull backups from target servers to control server
