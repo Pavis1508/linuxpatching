@@ -8,8 +8,8 @@
     backup_script_path: /usr/local/bin/backup_script.sh
     backup_dir: /var/tmp/backups
     async_timeout: 300
-    async_retries: 15
-    async_delay: 20
+    async_retries: 25
+    async_delay: 30
 
   tasks:
     - name: Gather minimal facts
@@ -33,7 +33,7 @@
         chdir: /var/tmp
       environment:
         CONTROL_SERVER_IP: "192.168.137.3"
-      async: 180
+      async: 300
       poll: 0
       register: backup_job_id
 
