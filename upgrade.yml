@@ -3,6 +3,14 @@
   become: true
   gather_facts: yes
 
+ vars:
+    control_server_ip: "192.168.137.3"
+    backup_script_path: /usr/local/bin/backup_script.sh
+    backup_dir: /var/tmp/backups
+    async_timeout: 300
+    async_retries: 15
+    async_delay: 20
+
   tasks:
     - name: Gather minimal facts
       ansible.builtin.setup:
@@ -34,19 +42,19 @@
         jid: "{{ backup_job_id.ansible_job_id }}"
       register: backup_result
       until: backup_result.finished
-      retries: 10
-      delay: 20
+      retries: 25
+      delay: 30
 
     - name: Create backup directory on control server
       ansible.builtin.file:
-        path: "/var/tmp/backups/{{ inventory_hostname }}"
+        path: "/var/tmp/backups/{{ ansible_hostname }}"
         state: directory
       delegate_to: 192.168.137.3
 
     - name: Pull backups from target servers to control server
       ansible.builtin.synchronize:
-        src: "/var/tmp/backups/{{ inventory_hostname }}"
-        dest: "/var/tmp/backups/{{ inventory_hostname }}"
+        src: "/var/tmp/backups/{{ ansible_hostname }}"
+        dest: "/var/tmp/backups/{{ ansible_hostname }}"
         mode: pull
         rsync_opts:
           - "--compress"
