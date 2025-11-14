@@ -37,19 +37,23 @@
       retries: 25
       delay: 30
 
-   - name: Create backup directory on control server
-  ansible.builtin.file:
-    path: "/var/tmp/backups/{{ ansible_hostname }}"
-    state: directory
-  delegate_to: 192.168.137.3
+    # FIX: This task is now correctly indented to match the other tasks
+    - name: Create backup directory on control server
+      ansible.builtin.file:
+        path: "/var/tmp/backups/{{ ansible_hostname }}"
+        state: directory
+      delegate_to: 192.168.137.3
 
-- name: Pull backups from target servers to control server
-  ansible.builtin.synchronize:
-    src: "/var/tmp/backups/{{ ansible_hostname }}"
-    dest: "/var/tmp/backups/{{ ansible_hostname }}"
-    mode: pull
-    rsync_opts:
-      - "--compress"
+    # FIX: This task is now correctly indented
+    - name: Pull backups from target servers to control server
+      ansible.builtin.synchronize:
+        src: "/var/tmp/backups/{{ ansible_hostname }}"
+        dest: "/var/tmp/backups/{{ ansible_hostname }}"
+        mode: pull
+        rsync_opts:
+          - "--compress"
+
+    # FIX: All tasks below were incorrectly nested. They are now separate tasks.
     - name: Check file system utilization
       ansible.builtin.command: df -h /
       register: disk_space
